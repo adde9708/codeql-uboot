@@ -105,7 +105,7 @@ compilation_time(
  */
 #keyset[compilation, file_number, file_number_diagnostic_number]
 diagnostic_for(
-    unique int diagnostic : @diagnostic ref,
+    int diagnostic : @diagnostic ref,
     int compilation : @compilation ref,
     int file_number : int ref,
     int file_number_diagnostic_number : int ref
@@ -422,8 +422,9 @@ function_defaulted(unique int id: @function ref);
 
 
 
+#keyset[id, type_id]
 fun_decls(
-    unique int id: @fun_decl,
+    int id: @fun_decl,
     int function: @function ref,
     int type_id: @type ref,
     string name: string ref,
@@ -460,8 +461,9 @@ param_decl_bind(
     int fun_decl: @fun_decl ref
 );
 
+#keyset[id, type_id]
 var_decls(
-    unique int id: @var_decl,
+    int id: @var_decl,
     int variable: @variable ref,
     int type_id: @type ref,
     string name: string ref,
@@ -521,18 +523,21 @@ params(
 
 overrides(int new: @function ref, int old: @function ref);
 
+#keyset[id, type_id]
 membervariables(
-    unique int id: @membervariable,
+    int id: @membervariable,
     int type_id: @type ref,
     string name: string ref
 );
 
+#keyset[id, type_id]
 globalvariables(
-    unique int id: @globalvariable,
+    int id: @globalvariable,
     int type_id: @type ref,
     string name: string ref
 );
 
+#keyset[id, type_id]
 localvariables(
     int id: @localvariable,
     int type_id: @type ref,
@@ -611,6 +616,7 @@ enumconstants(
   | 48 = _Float64x
   | 49 = _Float128
   | 50 = _Float128x
+  | 51 = char8_t
   ;
 */
 builtintypes(
@@ -675,7 +681,7 @@ decltypes(
   | 2 = class
   | 3 = union
   | 4 = enum
-  | 5 = typedef
+  | 5 = typedef                       // classic C: typedef typedef type name
   | 6 = template
   | 7 = template_parameter
   | 8 = template_template_parameter
@@ -684,6 +690,7 @@ decltypes(
 // ... 11 objc_protocol deprecated
 // ... 12 objc_category deprecated
   | 13 = scoped_enum
+  | 14 = using_alias                  // a using name = type style typedef
   ;
 */
 usertypes(
@@ -705,6 +712,11 @@ usertype_uuid(
     unique string uuid: string ref
 );
 
+mangled_name(
+    unique int id: @declaration ref,
+    int mangled_name : @mangledname
+);
+
 is_pod_class(unique int id: @usertype ref);
 is_standard_layout_class(unique int id: @usertype ref);
 
@@ -719,6 +731,11 @@ class_template_argument(
     int type_id: @usertype ref,
     int index: int ref,
     int arg_type: @type ref
+);
+class_template_argument_value(
+    int type_id: @usertype ref,
+    int index: int ref,
+    int arg_value: @expr ref
 );
 
 is_proxy_class_for(
@@ -744,6 +761,11 @@ function_template_argument(
     int index: int ref,
     int arg_type: @type ref
 );
+function_template_argument_value(
+    int function_id: @function ref,
+    int index: int ref,
+    int arg_value: @expr ref
+);
 
 is_variable_template(unique int id: @variable ref);
 variable_instantiation(
@@ -754,6 +776,11 @@ variable_template_argument(
     int variable_id: @variable ref,
     int index: int ref,
     int arg_type: @type ref
+);
+variable_template_argument_value(
+    int variable_id: @variable ref,
+    int index: int ref,
+    int arg_value: @expr ref
 );
 
 /*
@@ -1026,7 +1053,8 @@ frienddecls(
          | @namequalifier
          | @specialnamequalifyingelement
          | @static_assert
-         | @type_mention;
+         | @type_mention
+         | @lambdacapture;
 
 @exprparent = @element;
 
@@ -1054,10 +1082,12 @@ compgenerated(unique int id: @element ref);
  * destructed in reverse construction order, so for a given `element`
  * these should be called from highest to lowest `i`.
  */
+#keyset[element, destructor_call]
+#keyset[element, i]
 synthetic_destructor_call(
     int element: @element ref,
     int i: int ref,
-    unique int destructor_call: @routineexpr ref
+    int destructor_call: @routineexpr ref
 );
 
 namespaces(
@@ -1113,6 +1143,13 @@ conversionkinds(
     int kind: int ref
 );
 
+@conversion = @cast
+            | @array_to_pointer
+            | @parexpr
+            | @reference_to
+            | @ref_indirect
+            ;
+
 /*
 case @funbindexpr.kind of
   0 = @normal_call  // a normal call
@@ -1160,6 +1197,110 @@ funbind(
 @new_or_delete_expr = @any_new_expr
                     | @delete_expr
                     | @delete_array_expr;
+
+@prefix_crement_expr = @preincrexpr | @predecrexpr;
+
+@postfix_crement_expr = @postincrexpr | @postdecrexpr;
+
+@increment_expr = @preincrexpr | @postincrexpr;
+
+@decrement_expr = @predecrexpr | @postdecrexpr;
+
+@crement_expr = @increment_expr | @decrement_expr;
+
+@un_arith_op_expr = @arithnegexpr
+                  | @unaryplusexpr
+                  | @conjugation
+                  | @realpartexpr
+                  | @imagpartexpr
+                  | @crement_expr
+                  ;
+
+@un_bitwise_op_expr = @complementexpr;
+
+@un_log_op_expr = @notexpr;
+
+@un_op_expr = @address_of
+            | @indirect
+            | @un_arith_op_expr
+            | @un_bitwise_op_expr
+            | @builtinaddressof
+            | @vec_fill
+            | @un_log_op_expr
+            ;
+
+@bin_log_op_expr = @andlogicalexpr | @orlogicalexpr;
+
+@cmp_op_expr = @eq_op_expr | @rel_op_expr;
+
+@eq_op_expr = @eqexpr | @neexpr;
+
+@rel_op_expr = @gtexpr
+             | @ltexpr
+             | @geexpr
+             | @leexpr
+             | @spaceshipexpr
+             ;
+
+@bin_bitwise_op_expr = @lshiftexpr
+                     | @rshiftexpr
+                     | @andexpr
+                     | @orexpr
+                     | @xorexpr
+                     ;
+
+@p_arith_op_expr = @paddexpr
+                 | @psubexpr
+                 | @pdiffexpr
+                 ;
+
+@bin_arith_op_expr = @addexpr
+                   | @subexpr
+                   | @mulexpr
+                   | @divexpr
+                   | @remexpr
+                   | @jmulexpr
+                   | @jdivexpr
+                   | @fjaddexpr
+                   | @jfaddexpr
+                   | @fjsubexpr
+                   | @jfsubexpr
+                   | @minexpr
+                   | @maxexpr
+                   | @p_arith_op_expr
+                   ;
+
+@bin_op_expr = @bin_arith_op_expr
+             | @bin_bitwise_op_expr
+             | @cmp_op_expr
+             | @bin_log_op_expr
+             ;
+
+@op_expr = @un_op_expr
+         | @bin_op_expr
+         | @assign_expr
+         | @conditionalexpr
+         ;
+
+@assign_arith_expr = @assignaddexpr
+                   | @assignsubexpr
+                   | @assignmulexpr
+                   | @assigndivexpr
+                   | @assignremexpr
+                   ;
+
+@assign_bitwise_expr = @assignandexpr
+                     | @assignorexpr
+                     | @assignxorexpr
+                     | @assignlshiftexpr
+                     | @assignrshiftexpr
+                     | @assignpaddexpr
+                     | @assignpsubexpr
+                     ;
+
+@assign_op_expr = @assign_arith_expr | @assign_bitwise_expr
+
+@assign_expr = @assignexpr | @assign_op_expr
 
 /*
   case @allocator.form of
@@ -1236,11 +1377,15 @@ expr_cond_false(
     int false: @expr ref
 );
 
-// the second field is a string representation of the value
-// the third field is the actual text in the source or the same as the second field
+/** A string representation of the value. */
 values(
     unique int id: @value,
-    string str: string ref,
+    string str: string ref
+);
+
+/** The actual text in the source code for the value, if any. */
+valuetext(
+    unique int id: @value ref,
     string text: string ref
 );
 
@@ -1499,7 +1644,70 @@ case @expr.kind of
 | 322 = @builtinaddressof
 | 323 = @vec_fill
 | 324 = @builtinconvertvector
+| 325 = @builtincomplex
+| 326 = @spaceshipexpr
 ;
+
+@var_args_expr = @vastartexpr
+               | @vaendexpr
+               | @vaargexpr
+               | @vacopyexpr
+               ;
+
+@builtin_op = @var_args_expr
+            | @noopexpr
+            | @offsetofexpr
+            | @intaddrexpr
+            | @hasassignexpr
+            | @hascopyexpr
+            | @hasnothrowassign
+            | @hasnothrowconstr
+            | @hasnothrowcopy
+            | @hastrivialassign
+            | @hastrivialconstr
+            | @hastrivialcopy
+            | @hastrivialdestructor
+            | @hasuserdestr
+            | @hasvirtualdestr
+            | @isabstractexpr
+            | @isbaseofexpr
+            | @isclassexpr
+            | @isconvtoexpr
+            | @isemptyexpr
+            | @isenumexpr
+            | @ispodexpr
+            | @ispolyexpr
+            | @isunionexpr
+            | @typescompexpr
+            | @builtinshufflevector
+            | @builtinconvertvector
+            | @builtinaddressof
+            | @istriviallyconstructibleexpr
+            | @isdestructibleexpr
+            | @isnothrowdestructibleexpr
+            | @istriviallydestructibleexpr
+            | @istriviallyassignableexpr
+            | @isnothrowassignableexpr
+            | @isstandardlayoutexpr
+            | @istriviallycopyableexpr
+            | @isliteraltypeexpr
+            | @hastrivialmoveconstructorexpr
+            | @hastrivialmoveassignexpr
+            | @hasnothrowmoveassignexpr
+            | @isconstructibleexpr
+            | @isnothrowconstructibleexpr
+            | @hasfinalizerexpr
+            | @isdelegateexpr
+            | @isinterfaceclassexpr
+            | @isrefarrayexpr
+            | @isrefclassexpr
+            | @issealedexpr
+            | @issimplevalueclassexpr
+            | @isvalueclassexpr
+            | @isfinalexpr
+            | @builtinchooseexpr
+            | @builtincomplex
+            ;
 
 new_allocated_type(
     unique int expr: @new_expr ref,
@@ -1579,6 +1787,7 @@ lambda_capture(
     unique int id: @lambdacapture,
     int lambda: @lambdaexpr ref,
     int index: int ref,
+    int field: @membervariable ref,
     boolean captured_by_reference: boolean ref,
     boolean is_implicit: boolean ref,
     int location: @location_default ref
@@ -1597,6 +1806,8 @@ lambda_capture(
 @varbindexpr = @varaccess | @ctorfieldinit | @dtorfielddestruct;
 @addressable = @function | @variable ;
 @accessible = @addressable | @enumconstant ;
+
+@access = @varaccess | @routineexpr ;
 
 fold(
     int expr: @foldexpr ref,
@@ -1638,6 +1849,7 @@ case @stmt.kind of
 // ...  32 @stmt_at_synchronized deprecated
 |  33 = @stmt_handler
 // ...  34 @stmt_finally_end deprecated
+|  35 = @stmt_constexpr_if
 ;
 
 type_vla(
@@ -1657,6 +1869,16 @@ if_then(
 
 if_else(
     unique int if_stmt: @stmt_if ref,
+    int else_id: @stmt ref
+);
+
+constexpr_if_then(
+    unique int constexpr_if_stmt: @stmt_constexpr_if ref,
+    int then_id: @stmt ref
+);
+
+constexpr_if_else(
+    unique int constexpr_if_stmt: @stmt_constexpr_if ref,
     int else_id: @stmt ref
 );
 
