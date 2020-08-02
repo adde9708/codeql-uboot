@@ -1,0 +1,21 @@
+{
+    "configurations": [
+        {
+            "name": "Win32",
+            "includePath": [
+                "${workspacepath}/**",
+                "E:\\VS Code\\CodeQL\\courserepo\\u-boot_u-boot_d0d07ba\\src\\usr\\x86_64-linux-gnu\\include\\/**"
+            ],
+            "defines": [
+                "_DEBUG",
+                "UNICODE",
+                "_UNICODE"
+            ],
+            "intelliSenseMode": "msvc-x64",
+            "cppStandard": "c++20",
+            "cStandard": "c18",
+            "compilerArgs": []
+        }
+    ],
+    "version": 4
+}
